@@ -22,20 +22,6 @@ class BidirectionalRNNLayer(BaseLayer):
             self.biases['backward_bias'] = weights[5]
 
             self.initialized = True
-        # else:
-        #     # Initialize weights
-        #     for direction in ['forward', 'backward']:
-        #         self.weights[f'{direction}_kernel'] = np.random.uniform(
-        #             -np.sqrt(6.0 / (self.forward_units + self.forward_units)),
-        #             np.sqrt(6.0 / (self.forward_units + self.forward_units)),
-        #             (self.forward_units, self.forward_units)
-        #         )
-        #         self.weights[f'{direction}_recurrent'] = np.random.uniform(
-        #             -np.sqrt(6.0 / (self.forward_units + self.forward_units)),
-        #             np.sqrt(6.0 / (self.forward_units + self.forward_units)),
-        #             (self.forward_units, self.forward_units)
-        #         )
-        #         self.biases[f'{direction}_bias'] = np.zeros(self.forward_units)
     
     def forward(self, x, training=False):
         batch_size, seq_len, input_dim = x.shape
@@ -53,17 +39,6 @@ class BidirectionalRNNLayer(BaseLayer):
                     (self.forward_units, self.forward_units)
                 )
                 self.biases[f'{direction}_bias'] = np.zeros(self.forward_units)
-
-            # limit = np.sqrt(6.0 / (input_dim + self.forward_units))
-            
-            # self.weights['forward_kernel'] = np.random.uniform(-limit, limit, (input_dim, self.forward_units))
-            # self.weights['forward_recurrent'] = np.random.uniform(-limit, limit, (self.forward_units, self.forward_units))
-            # self.biases['forward_bias'] = np.zeros(self.forward_units)
-
-            # self.weights['backward_kernel'] = np.random.uniform(-limit, limit, (input_dim, self.backward_units))
-            # self.weights['backward_recurrent'] = np.random.uniform(-limit, limit, (self.backward_units, self.backward_units))
-            # self.biases['backward_bias'] = np.zeros(self.backward_units)
-
             self.initialized = True
         
         # Forward pass

@@ -14,17 +14,6 @@ class SimpleRNNLayer(BaseLayer):
             self.biases['bias'] = weights[2]
 
             self.initialized = True
-        # else:
-        #     # Xavier initialization
-        #     self.weights['kernel'] = np.random.uniform(
-        #         -np.sqrt(6.0 / (units + units)), np.sqrt(6.0 / (units + units)),
-        #         (units, units)
-        #     )
-        #     self.weights['recurrent_kernel'] = np.random.uniform(
-        #         -np.sqrt(6.0 / (units + units)), np.sqrt(6.0 / (units + units)),
-        #         (units, units)
-        #     )
-        #     self.biases['bias'] = np.zeros(units)
     
     def forward(self, x, training=False):
         batch_size, seq_len, input_dim = x.shape
