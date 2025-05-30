@@ -9,6 +9,8 @@ class DenseLayer(BaseLayer):
         self.output_size = output_size
         self.activation = activation
         self.initialized = False
+        self.weights = {'kernel': None}
+        self.biases = {'bias': None}
         self.gradients = {'kernel': None, 'bias': None}
         
         if input_size is not None and output_size is not None:

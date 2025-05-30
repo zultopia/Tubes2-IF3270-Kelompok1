@@ -13,9 +13,9 @@ class Conv2DLayer(BaseLayer):
         self.padding = padding
         self.activation = activation
         self.initialized = False
+        self.gradients = {'kernel': None, 'bias': None}
         
         self._initialize_weights()
-        
         self.output_shape = self._calculate_output_shape()
     
     def _initialize_weights(self):
@@ -68,6 +68,8 @@ class Conv2DLayer(BaseLayer):
             return x
     
     def forward(self, x, training=False):
+        self.cache['input'] = x
+        
         batch_size = x.shape[0]
         x_padded = self._add_padding(x)
         
@@ -88,13 +90,14 @@ class Conv2DLayer(BaseLayer):
                         
                         if h_end <= x_padded.shape[1] and w_end <= x_padded.shape[2]:
                             region = x_padded[b, h_start:h_end, w_start:w_end, :]
-                            output[b, h, w, f] = np.sum(region * self.weights['kernel'][:, :, :, f]) + self.biases['bias'][f]
+                            conv_result = np.sum(region * self.weights['kernel'][:, :, :, f])
+                            output[b, h, w, f] = conv_result + self.biases['bias'][f]
         
         return self._apply_activation(output)
     
     def backward(self, grad_output):
         if 'input' not in self.cache:
-            raise ValueError("Forward pass harus dilakukan terlebih dahulu")
+            raise ValueError("Forward pass must be performed first")
         
         input_data = self.cache['input']
         batch_size, input_h, input_w, input_c = input_data.shape
@@ -105,7 +108,6 @@ class Conv2DLayer(BaseLayer):
         grad_input = np.zeros_like(input_data)
         
         input_padded = self._add_padding(input_data)
-        
         kh, kw = self.kernel_size
         sh, sw = self.strides
         
@@ -120,6 +122,7 @@ class Conv2DLayer(BaseLayer):
                         
                         if h_end <= input_padded.shape[1] and w_end <= input_padded.shape[2]:
                             region = input_padded[b, h_start:h_end, w_start:w_end, :]
+                            
                             grad_kernel[:, :, :, f] += region * grad_output[b, h, w, f]
                             
                             grad_bias[f] += grad_output[b, h, w, f]
@@ -152,77 +155,7 @@ class Conv2DLayer(BaseLayer):
         self.gradients['bias'] = grad_bias
         
         return grad_input
-
+    
     def set_weights(self, weights, biases):
         self.weights['kernel'] = weights
         self.biases['bias'] = biases
-
-# class Conv2DLayerWithBackward(Conv2DLayer):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.gradients = {'kernel': None, 'bias': None}
-    
-#     def backward(self, grad_output):
-#         if 'input' not in self.cache:
-#             raise ValueError("Forward pass harus dilakukan terlebih dahulu")
-        
-#         input_data = self.cache['input']
-#         batch_size, input_h, input_w, input_c = input_data.shape
-#         _, output_h, output_w, output_c = grad_output.shape
-        
-#         grad_kernel = np.zeros_like(self.weights['kernel'])
-#         grad_bias = np.zeros_like(self.biases['bias'])
-#         grad_input = np.zeros_like(input_data)
-        
-#         input_padded = self._add_padding(input_data)
-        
-#         kh, kw = self.kernel_size
-#         sh, sw = self.strides
-        
-#         for b in range(batch_size):
-#             for f in range(self.filters):
-#                 for h in range(output_h):
-#                     for w in range(output_w):
-#                         h_start = h * sh
-#                         h_end = h_start + kh
-#                         w_start = w * sw
-#                         w_end = w_start + kw
-                        
-#                         if h_end <= input_padded.shape[1] and w_end <= input_padded.shape[2]:
-#                             region = input_padded[b, h_start:h_end, w_start:w_end, :]
-#                             grad_kernel[:, :, :, f] += region * grad_output[b, h, w, f]
-                            
-#                             grad_bias[f] += grad_output[b, h, w, f]
-                            
-#                             grad_input_region = self.weights['kernel'][:, :, :, f] * grad_output[b, h, w, f]
-                            
-#                             if self.padding == 'same':
-#                                 pad_h = max(0, (output_h - 1) * sh + kh - input_h)
-#                                 pad_w = max(0, (output_w - 1) * sw + kw - input_w)
-#                                 pad_top = pad_h // 2
-#                                 pad_left = pad_w // 2
-                                
-#                                 input_h_start = max(0, h_start - pad_top)
-#                                 input_h_end = min(input_h, h_end - pad_top)
-#                                 input_w_start = max(0, w_start - pad_left)
-#                                 input_w_end = min(input_w, w_end - pad_left)
-                                
-#                                 if (input_h_start < input_h_end and input_w_start < input_w_end):
-#                                     kernel_h_start = max(0, pad_top - h_start)
-#                                     kernel_h_end = kernel_h_start + (input_h_end - input_h_start)
-#                                     kernel_w_start = max(0, pad_left - w_start)
-#                                     kernel_w_end = kernel_w_start + (input_w_end - input_w_start)
-                                    
-#                                     grad_input[b, input_h_start:input_h_end, input_w_start:input_w_end, :] += \
-#                                         grad_input_region[kernel_h_start:kernel_h_end, kernel_w_start:kernel_w_end, :]
-#                             else:
-#                                 grad_input[b, h_start:h_end, w_start:w_end, :] += grad_input_region
-        
-#         self.gradients['kernel'] = grad_kernel
-#         self.gradients['bias'] = grad_bias
-        
-#         return grad_input
-    
-#     def forward(self, x, training=False):
-#         self.cache['input'] = x
-#         return super().forward(x, training)
