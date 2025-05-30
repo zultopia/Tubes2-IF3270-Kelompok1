@@ -255,7 +255,9 @@ class RNNFromScratch:
         
         self.layers = []
 
-        for keras_layer in keras_model.layers:
+        for i, keras_layer in enumerate(keras_model.layers):
+            print(f"\nProcessing layer {i+1}: {keras_layer.__class__.__name__}")
+            
             if isinstance(keras_layer, tf.keras.layers.Embedding):
                 weights = keras_layer.get_weights()[0]
                 self.add_embedding_layer(
@@ -263,6 +265,7 @@ class RNNFromScratch:
                     embedding_dim=weights.shape[1], 
                     weights=weights
                 )
+                print(f"Added EmbeddingLayer: vocab_size={weights.shape[0]}, embedding_dim={weights.shape[1]}")
                 
             elif isinstance(keras_layer, tf.keras.layers.SimpleRNN):
                 weights = keras_layer.get_weights()
@@ -272,31 +275,51 @@ class RNNFromScratch:
                     return_sequences=return_seq,
                     weights=weights
                 )
+                print(f"Added SimpleRNNLayer: units={keras_layer.units}, return_sequences={return_seq}")
                 
             elif isinstance(keras_layer, tf.keras.layers.Bidirectional):
-                forward_weights = keras_layer.forward_layer.get_weights()
-                backward_weights = keras_layer.backward_layer.get_weights()
-                all_weights = forward_weights + backward_weights
-                
-                return_seq = keras_layer.forward_layer.return_sequences
-                self.add_bidirectional_rnn_layer(
-                    units=keras_layer.forward_layer.units * 2, 
-                    return_sequences=return_seq,
-                    weights=all_weights
-                )
+                try:
+                    wrapped_layer = keras_layer.forward_layer
+                    if isinstance(wrapped_layer, tf.keras.layers.SimpleRNN):
+                        forward_weights = keras_layer.forward_layer.get_weights()
+                        backward_weights = keras_layer.backward_layer.get_weights()
+                        all_weights = forward_weights + backward_weights
+                        
+                        return_seq = wrapped_layer.return_sequences
+                        total_units = wrapped_layer.units * 2
+                        
+                        self.add_bidirectional_rnn_layer(
+                            units=total_units, 
+                            return_sequences=return_seq,
+                            weights=all_weights
+                        )
+                        print(f"Added BidirectionalRNNLayer: units={total_units}, return_sequences={return_seq}")
+                    else:
+                        print(f"Warning: Bidirectional layer contains {type(wrapped_layer)}, not RNN")
+                except AttributeError as e:
+                    print(f"Error processing Bidirectional layer: {e}")
+                    print("Skipping this layer...")
+                    continue
                 
             elif isinstance(keras_layer, tf.keras.layers.Dropout):
                 self.add_dropout_layer(rate=keras_layer.rate)
+                print(f"Added DropoutLayer: rate={keras_layer.rate}")
                 
             elif isinstance(keras_layer, tf.keras.layers.Dense):
                 weights = keras_layer.get_weights()
+                activation_name = keras_layer.activation.__name__
                 self.add_dense_layer(
                     units=keras_layer.units,
-                    activation=keras_layer.activation.__name__,
+                    activation=activation_name,
                     weights=weights
                 )
+                print(f"Added DenseLayer: units={keras_layer.units}, activation={activation_name}")
+            
+            else:
+                print(f"Warning: Unknown layer type {keras_layer.__class__.__name__}, skipping...")
         
-        print(f"\nModel loaded successfully. \n{len(self.layers)} layers:")
+        print(f"\nModel loaded successfully!")
+        print(f"Total layers: {len(self.layers)}")
         for i, layer in enumerate(self.layers):
             print(f"Layer {i+1}: {layer.__class__.__name__}")
     
